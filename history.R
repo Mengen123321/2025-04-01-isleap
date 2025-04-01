@@ -53,3 +53,6 @@ devtools::test()
 
 # adds a CRAN package dependency to DESCRIPTION and offers a little advice about how to best use it
 usethis::use_package("stringr")
+
+# Allows people to use package not available yet on CRAN
+remotes::install_github("<github url>")
