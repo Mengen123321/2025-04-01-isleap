@@ -1,0 +1,64 @@
+# Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
+# Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
+
+on:
+  push:
+    branches: [main, master]        # Trigger workflow on push to main or master
+  pull_request:                     # Also run on pull requests to any branch
+
+name: test-coverage.yaml            # Name of the workflow (shown in GitHub UI)
+
+permissions: read-all               # Set GitHub token permissions to read-only (more secure)
+
+jobs:
+  test-coverage:
+    runs-on: ubuntu-latest          # Run the job on the latest Ubuntu virtual machine
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}   # Use GitHub token to install private deps if needed
+
+    steps:
+      - uses: actions/checkout@v4             # Step 1: Checkout your code from the repo
+
+      - uses: r-lib/actions/setup-r@v2        # Step 2: Set up R on the runner
+        with:
+          use-public-rspm: true               # Use Posit (formerly RStudio) Public Package Manager for fast installs
+
+      - uses: r-lib/actions/setup-r-dependencies@v2   # Step 3: Install dependencies
+        with:
+          extra-packages: any::covr, any::xml2        # Also install covr and xml2
+          needs: coverage                             # Install packages needed for test coverage
+
+      - name: Test coverage                    # Step 4: Run covr::package_coverage and save results as cobertura.xml
+        run: |
+          cov <- covr::package_coverage(
+            quiet = FALSE,
+            clean = FALSE,
+            install_path = file.path(normalizePath(Sys.getenv("RUNNER_TEMP"), winslash = "/"), "package")
+          )
+          print(cov)                            # Print coverage summary
+          covr::to_cobertura(cov)               # Write coverage report to cobertura.xml
+        shell: Rscript {0}                      # Run the block as R code
+
+      - uses: codecov/codecov-action@v5        # Step 5: Upload the coverage report to Codecov
+        with:
+          fail_ci_if_error: ${{ github.event_name != 'pull_request' || secrets.CODECOV_TOKEN }}
+          files: ./cobertura.xml                # Path to the coverage XML file
+          plugins: noop                         # No plugins (default behavior)
+          disable_search: true                  # Don't try to auto-locate the report
+          token: ${{ secrets.CODECOV_TOKEN }}   # Your Codecov token (optional for public repos)
+
+      - name: Show testthat output              # Step 6: If tests failed, print their output
+        if: always()                            # Run this step even if a previous one failed
+        run: |
+          ## --------------------------------------------------------------------
+          find '${{ runner.temp }}/package' -name 'testthat.Rout*' -exec cat '{}' \; || true
+        shell: bash
+
+      - name: Upload test results               # Step 7: If job failed, upload test output as artifact
+        if: failure()                           # Only run if something in the job failed
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-test-failures          # Name of the artifact bundle
+          path: ${{ runner.temp }}/package      # Path to test outputs
+
