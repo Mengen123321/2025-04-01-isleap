@@ -1,0 +1,68 @@
+# This workflow is adapted from r-lib/actions examples.
+# It automates R CMD check on multiple operating systems and R versions.
+# For help: https://github.com/r-lib/actions#where-to-find-help
+
+# The workflow triggers on:
+# - pushes to the main or master branches
+# - pull requests to any branch
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# The name shown in the GitHub Actions UI
+name: R-CMD-check.yaml
+
+# Set read-only permissions for all scopes (recommended default)
+permissions: read-all
+
+jobs:
+  R-CMD-check:
+    # This matrix allows the job to run on multiple OS and R versions
+    runs-on: ${{ matrix.config.os }}
+
+    # Display name of each job, showing OS and R version
+    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+
+    strategy:
+      fail-fast: false # Continue other jobs even if one fails
+      matrix:
+        config:
+          - {os: macos-latest,   r: 'release'}      # Latest macOS with release version of R
+          - {os: windows-latest, r: 'release'}      # Latest Windows with release version of R
+          - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'release'}  # Ubuntu with R devel
+          - {os: ubuntu-latest,  r: 'release'}      # Ubuntu with release version of R
+          - {os: ubuntu-latest,  r: 'oldrel-1'}     # Ubuntu with one version older than release
+
+    # Environment variables for the job
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}   # Auth token for installing GitHub packages
+      R_KEEP_PKG_SOURCE: yes                    # Keep package sources during install (useful for debugging)
+
+    steps:
+      # Step 1: Check out the repo code
+      - uses: actions/checkout@v4
+
+      # Step 2: Install Pandoc (used for building vignettes and docs)
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      # Step 3: Set up R with specified version from matrix
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.config.r }}                  # Set R version
+          http-user-agent: ${{ matrix.config.http-user-agent }} # Override user-agent if needed
+          use-public-rspm: true                              # Use Posit package manager for faster installs
+
+      # Step 4: Install dependencies for the package
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck                    # Ensure rcmdcheck is available
+          needs: check                                      # Install all packages needed for checking
+
+      # Step 5: Run R CMD check
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          upload-snapshots: true                            # Upload test snapshots (useful for shinytest2, etc.)
+          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")' 
+          # Skip building manual to save time and avoid LaTeX issues
+          # Compress vignettes using Ghostscript and qpdf to reduce size
