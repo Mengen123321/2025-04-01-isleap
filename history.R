@@ -56,3 +56,24 @@ usethis::use_package("stringr")
 
 # Allows people to use package not available yet on CRAN
 remotes::install_github("<github url>")
+
+# Use pkgdown::build_site() + GitHub Pages:
+# You want a user-friendly website for your R package.
+# Your package includes vignettes, tutorials, or lots of functions.
+# You want people to browse your package like they do on ggplot2.tidyverse.org or dplyr.tidyverse.org.
+# You want to link to docs from your portfolio or a blog.
+
+usethis::use_pkgdown()
+pkgdown::build_site() 
+
+#  R CMD check via use_github_action  uses :
+# Validating your package
+# Running tests
+# Checking documentation syntax (but not building a site)
+# Ensuring it works on multiple OS/R versions
+# Mimicking CRAN checks
+
+#  It checks that everything is working
+# But it does not generate a browsable website
+
+usethis::use_github_action_check_standard()
