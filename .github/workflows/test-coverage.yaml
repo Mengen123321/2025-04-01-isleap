@@ -46,7 +46,7 @@ jobs:
           files: ./cobertura.xml                # Path to the coverage XML file
           plugins: noop                         # No plugins (default behavior)
           disable_search: true                  # Don't try to auto-locate the report
-          #token: ${{ secrets.CODECOV_TOKEN }}   # Your Codecov token (optional for public repos)
+          token: ${{ secrets.CODECOV_TOKEN }}   # Your Codecov token (optional for public repos)
 
       - name: Show testthat output              # Step 6: If tests failed, print their output
         if: always()                            # Run this step even if a previous one failed
